@@ -13,7 +13,7 @@ public class MailWriter {
 
 		
 		
-		String convert = "MAIL "+fileName.concat(".txt");
+		String convert = "mails" + File.separator + "MAIL "+fileName.concat(".txt");
 		File file = new File(convert);
 		
 		

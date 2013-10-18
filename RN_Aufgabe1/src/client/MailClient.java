@@ -2,6 +2,8 @@ package client;
 
 import java.io.*;
 import java.net.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import javax.security.auth.login.LoginException;
 
@@ -41,9 +43,14 @@ public class MailClient extends Thread {
 				int amoutOfMailsOnServer = countMailsOnServer();
 				saveAllMailsFromServer(amoutOfMailsOnServer);
 				
+				logout();
+				
 				try {
-					System.out.println("Client gestartet");
+					System.out.println("Fetching mails completed. Waiting 30sek...");
+					writeLogFile("Fetching mails completed.\r\n");
 					Thread.sleep(30000);
+					System.out.println("Fetching mails...");
+					writeLogFile("Fetching mails...");
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -61,13 +68,19 @@ public class MailClient extends Thread {
 	private void writeToServer(String request) throws IOException {
 		/* Sende eine Zeile zum Server */
 		outToServer.writeBytes(request + '\n');
-		System.out.println("TCP Client has sent the message: " + request);
+		System.out.println(">>TCP Client sent to " + user.getServerIp() + ":\t " + request);
+		writeLogFile("==> " + request);
+
 	}
 
 	private String readFromServer() throws IOException {
 		/* Lies die Antwort (reply) vom Server */
 		String reply = inFromServer.readLine();
-		System.out.println("TCP Client got from Server: " + reply);
+	
+		if (reply.startsWith("+OK") | reply.startsWith("-ERR")){ //ignores mail content
+			System.out.println("<<TCP Client got from " + user.getServerIp() + ":\t" + reply);
+			writeLogFile("<== " + reply);
+		}
 		return reply;
 	}
 
@@ -165,8 +178,10 @@ public class MailClient extends Thread {
 			String uniqueID = getUniqueIdWithUIDL(i);
 
 			getMailWithRETRandStoreMail(i, uniqueID);
-
+			writeLogFile("    Mail " + uniqueID + " saved localy.");
+			
 			deletsMailOnServerWithDELE(i);
+			writeLogFile("    Mail " + uniqueID + " deleted on Server.");
 
 		}
 
@@ -235,6 +250,26 @@ public class MailClient extends Thread {
 //		} else {
 //			System.out.println("Could not delete message " + mailNumber);
 //		}
+	}
+	
+	/**
+	 * creates and updates an log file with TimeStamp ServerName LogMessage
+	 * 
+	 * @param text input string
+	 */
+	private void writeLogFile(String text){
+		Date date = new Date();
+		 SimpleDateFormat ft = new SimpleDateFormat ("hh:mm:ss");
+
+			     
+			      
+		try {
+			MailWriter.writeMail("LOG ", ft.format(date)  +"\t "+user.getServerIp() +"\t "+ text + "\r\n");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 
 }
