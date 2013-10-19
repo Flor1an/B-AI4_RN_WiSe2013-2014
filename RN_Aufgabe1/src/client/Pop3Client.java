@@ -247,8 +247,8 @@ public class Pop3Client {
 			} else {
 
 				while (!(reply = readFromMailServer()).equals(".")) {
-					if (reply.startsWith(".") && reply.length() > 1){
-						reply = "." +reply;
+					if (reply.startsWith("..") && reply.length() > 1){
+						reply = reply.substring(1);
 					}					
 
 					MailWriter.writeMail(uidlOfMail, reply);

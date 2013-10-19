@@ -11,7 +11,7 @@ public class MailWriter {
 
 	public static void writeMail(String fileName, String inPut) throws IOException {
 
-		
+		(new File("mails")).mkdirs();
 		
 		String convert = "mails" + File.separator + fileName.concat(".txt");
 		File file = new File(convert);
@@ -26,7 +26,7 @@ public class MailWriter {
 	
 	public static void writeLog(String fileName, String inPut) throws IOException {
 
-		
+		(new File("logs")).mkdirs();
 		
 		String convert = "logs" + File.separator + "LOG "+fileName.concat(".txt");
 		File file = new File(convert);

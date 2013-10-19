@@ -8,6 +8,10 @@ import java.util.ArrayList;
 
 public class runServer {
 	public static void main(String[] args) {
+		
+		
+		
+		
 		ArrayList users = new ArrayList<>();
 		UserData u1 = new UserData("flo@flo.de", "PASSWORD");
 		users.add(u1);

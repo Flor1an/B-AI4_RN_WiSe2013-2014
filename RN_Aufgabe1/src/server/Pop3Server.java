@@ -150,6 +150,8 @@ class TCPServerThread extends Thread {
 			reply=userMethod(request);
 		}else if (request.toUpperCase().startsWith("PASS") && authentificationStatus==1){
 			reply=passMethod(request);
+		}else if(request.toUpperCase().startsWith("CAPA")) {
+			return "-ERR";
 		}else{
 			System.out.println("Authentification Problem (maybe unknown command) ###################");	
 			reply = "UNKNOWN";
@@ -168,8 +170,12 @@ class TCPServerThread extends Thread {
 	
 		for (String line : lines) {
 			outToClient.writeBytes(line + '\n');
-			System.out.println(">>POP3 Server sais " + "" + ":\t" + line);
-			if (line.startsWith("+OK") | line.startsWith("-ERR") | line.equals(".") | Character.isDigit(line.charAt(0))){ //ignores mail content
+			
+			
+			boolean isNumeric = line.length()>0 ? Character.isDigit(line.charAt(0)) : false;
+			
+			if (line.startsWith("+OK") | line.startsWith("-ERR") | line.equals(".") | isNumeric ){ //ignores mail content
+				System.out.println(">>POP3 Server sais " + "" + ":\t" + line);
 				writeLogFile("==> " + line + "\r\n");
 			}
 		}

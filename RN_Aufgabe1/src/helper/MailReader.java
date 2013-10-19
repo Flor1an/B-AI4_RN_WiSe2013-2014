@@ -27,17 +27,22 @@ public class MailReader {
 			try {
 				FileReader fr = new FileReader(fileEntry.getAbsolutePath());
 				BufferedReader br = new BufferedReader(fr);
-				String line = br.readLine();
+				String line ="";
 
-				while (line != null) {
-					content.append(line);
-					line = br.readLine();
+				while ((line = br.readLine()) != null) {
+					
+					//content.append(line);//my
+					
+					
+					//jan
+					line = (line.startsWith(".")) ? "."+line : line;
+					content.append(line + '\r' + '\n');
+					
 				}
 
 				br.close();
 				mails.add(content.toString());
-				names.add(fileEntry.getName().substring(0,
-						fileEntry.getName().length() - ".txt".length()));
+				names.add(fileEntry.getName().substring(0,fileEntry.getName().length() - ".txt".length()));
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
