@@ -1,4 +1,7 @@
-package client;
+package alphaversions;
+
+import helper.MailWriter;
+import helper.UserData;
 
 import java.io.*;
 import java.net.*;
@@ -8,7 +11,6 @@ import java.util.Date;
 import javax.security.auth.login.LoginException;
 
 public class MailClient extends Thread {
-	public static final int SERVER_PORT = 6789;
 
 	private Socket clientSocket; // TCP-Standard-Socketklasse
 
@@ -28,25 +30,30 @@ public class MailClient extends Thread {
 
 			while (true) {
 				/* Socket erzeugen --> Verbindungsaufbau mit dem Server */
-				clientSocket = new Socket(user.getServerIp(), user.getPort());
+				clientSocket = new Socket(user.getServerAdress(), user.getPort());
 
 				/* Socket-Basisstreams durch spezielle Streams filtern */
-				outToServer = new DataOutputStream(
-						clientSocket.getOutputStream());
-				inFromServer = new BufferedReader(new InputStreamReader(
-						clientSocket.getInputStream()));
+				outToServer = new DataOutputStream(clientSocket.getOutputStream());
+				inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-				readFromServer();
+				readFromServer(false);
 
 				// ******************
 				login();
+				
+				
+				writeToServer("LIST");
+				readFromServer(true);
+				
+				
+				
 				int amoutOfMailsOnServer = countMailsOnServer();
 				saveAllMailsFromServer(amoutOfMailsOnServer);
 				
 				logout();
 				
 				try {
-					System.out.println("Fetching mails completed. Waiting 30sek...");
+					System.out.println("Fetching mails completed. Waiting 30sek...\n");
 					writeLogFile("Fetching mails completed.\r\n");
 					Thread.sleep(30000);
 					System.out.println("Fetching mails...");
@@ -59,30 +66,41 @@ public class MailClient extends Thread {
 			}
 
 		} catch (Exception e) {
-			System.err.println("Connection aborted by server!");
+			System.err.println(this.getName() + " Connection aborted by server!");
 		}
 
-		System.out.println("TCP Client stopped!");
+		System.out.println(this.getName() + "TCP Client stopped!");
 	}
 
 	private void writeToServer(String request) throws IOException {
 		/* Sende eine Zeile zum Server */
 		outToServer.writeBytes(request + '\n');
-		System.out.println(">>TCP Client sent to " + user.getServerIp() + ":\t " + request);
+		System.out.println(">>TCP Client sent to " + user.getServerAdress() + ":\t " + request);
 		writeLogFile("==> " + request);
 
 	}
 
-	private String readFromServer() throws IOException {
+	private String readFromServer(boolean multi) throws IOException {
 		/* Lies die Antwort (reply) vom Server */
 		String reply = inFromServer.readLine();
 	
-		if (reply.startsWith("+OK") | reply.startsWith("-ERR")){ //ignores mail content
-			System.out.println("<<TCP Client got from " + user.getServerIp() + ":\t" + reply);
-			writeLogFile("<== " + reply);
+		if (multi==true){
+			while(reply.equals(".")!=true){
+				System.err.println("<<TCP Client got from " + user.getServerAdress() + ":\t" + reply);
+				writeLogFile("<== " + reply);
+
+				reply = inFromServer.readLine();
+			}
+		}else{
+			if (reply.startsWith("+OK") | reply.startsWith("-ERR")){ //ignores mail content
+				System.out.println("<<TCP Client got from " + user.getServerAdress() + ":\t" + reply);
+				writeLogFile("<== " + reply);
+			}
 		}
+		
 		return reply;
 	}
+	
 
 	/**
 	 * Authorization with POP Server
@@ -97,7 +115,7 @@ public class MailClient extends Thread {
 		// ##############################################
 
 		writeToServer("USER " + user.getUserName());
-		answer = readFromServer();
+		answer = readFromServer(false);
 
 		if (answer.startsWith("-ERR")) {
 			status = false;
@@ -111,7 +129,7 @@ public class MailClient extends Thread {
 		// ##############################################
 
 		writeToServer("PASS " + user.getPassword());
-		answer = readFromServer();
+		answer = readFromServer(false);
 
 		if (answer.startsWith("-ERR")) {
 			status = false;
@@ -149,7 +167,7 @@ public class MailClient extends Thread {
 		writeToServer("STAT");// stat gibt anzahl mails aufm server zurueck ->
 								// string mit oktalzahlen
 
-		answer = readFromServer();
+		answer = readFromServer(false);
 		if (answer.startsWith("-ERR")) {
 			System.out.println("Error while reading");
 			logout();
@@ -157,7 +175,6 @@ public class MailClient extends Thread {
 		}
 		String[] subelem = answer.split(" "); // von stat das 2. elem ist anzahl
 												// mails, rest unwichtig
-		System.out.println("Items in your Mailbox: " + subelem[1]);
 		return Integer.parseInt(subelem[1]);
 
 	}
@@ -197,7 +214,7 @@ public class MailClient extends Thread {
 	private String getUniqueIdWithUIDL(int mailNumber) throws Exception {
 		writeToServer("UIDL " + mailNumber);
 
-		String answer = readFromServer();
+		String answer = readFromServer(false);
 
 		if (answer.startsWith("-ERR")) {
 			logout();
@@ -219,13 +236,13 @@ public class MailClient extends Thread {
 	private void getMailWithRETRandStoreMail(int mailNumber, String uniqueID)
 			throws Exception {
 		writeToServer("RETR " + mailNumber);
-		String answer = readFromServer();
+		String answer = readFromServer(true);
 
 		if (answer.startsWith("-ERR")) {
 			logout();
 		}
 
-		while (!(answer = readFromServer()).equals(".")) {
+		while (!(answer = readFromServer(false)).equals(".")) {
 			answer = (answer.startsWith(".") && answer.length() > 1) ? answer
 					.substring(1, answer.length()) : answer;
 			// System.err.println(answer);
@@ -243,13 +260,13 @@ public class MailClient extends Thread {
 	 * @throws Exception
 	 */
 	private void deletsMailOnServerWithDELE(int mailNumber) throws Exception {
-//		writeToServer("DELE " + mailNumber);
-//
-//		if (readFromServer().startsWith("+OK")) {
-//			System.out.println("Message " + mailNumber + " deleted");
-//		} else {
-//			System.out.println("Could not delete message " + mailNumber);
-//		}
+		//writeToServer("DELE " + mailNumber);
+
+		if (readFromServer(false).startsWith("+OK")) {
+			System.out.println("Message " + mailNumber + " deleted");
+		} else {
+			System.out.println("Could not delete message " + mailNumber);
+		}
 	}
 	
 	/**
@@ -264,7 +281,7 @@ public class MailClient extends Thread {
 			     
 			      
 		try {
-			MailWriter.writeMail("LOG ", ft.format(date)  +"\t "+user.getServerIp() +"\t "+ text + "\r\n");
+			MailWriter.writeLog("CLIENT LOG ", ft.format(date)  +"\t "+user.getServerAdress() +"\t "+ text + "\r\n");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

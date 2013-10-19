@@ -1,17 +1,19 @@
-package client;
+package helper;
 
 public class UserData {
 
 	private String userName;
 	private String password;
-	private String serverIp;
+	private String serverAdress;
 	private int port;
+	private boolean keepCopyOnServer;
 
-	public UserData(String userName, String password, String serverIp, int port) {
+	public UserData(String userName, String password, String serverAdress, int port, boolean keepCopyOnServer) {
 		this.userName = userName;
 		this.password = password;
-		this.serverIp = serverIp;
+		this.serverAdress = serverAdress;
 		this.port = port;
+		this.keepCopyOnServer=keepCopyOnServer;
 	}
 	
 	public UserData(String userName, String password) {
@@ -27,12 +29,16 @@ public class UserData {
 		return password;
 	}
 
-	public String getServerIp() {
-		return serverIp;
+	public String getServerAdress() {
+		return serverAdress;
 	}
 
 	public int getPort() {
 		return port;
+	}
+	
+	public boolean keepCopyOnServer(){
+		return keepCopyOnServer;
 	}
 	
 	
