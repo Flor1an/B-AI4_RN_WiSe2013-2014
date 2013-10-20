@@ -15,6 +15,7 @@ import helper.UserData;
 import java.io.*;
 import java.net.*;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 
@@ -42,7 +43,7 @@ public class Pop3Server {
 				connectionSocket = welcomeSocket.accept();
 
 				/* Neuen Arbeits-Thread erzeugen und den Socket übergeben */
-				(new TCPServerThread(++counter, connectionSocket, null)).start();
+				(new TCPServerThread(++counter, connectionSocket)).start();
 			}
 		} catch (IOException e) {
 			System.err.println(this.toString() +  " " +e.toString());
@@ -63,8 +64,12 @@ class TCPServerThread extends Thread {
 	private BufferedReader inFromClient;
 	private DataOutputStream outToClient;
 	
-	private String USERNAME = "flo@flo.de";
-	private String PASSWORD = "PASSWORD";		
+	private ArrayList<UserData> userList = new ArrayList<>();
+	
+	String tryingToAuthenticate = "";
+	UserData authentificatedUser = null;
+
+
 
 	boolean serviceRequested = true; // Arbeitsthread beenden?
 	MailReader mr = new MailReader();
@@ -76,10 +81,18 @@ class TCPServerThread extends Thread {
 	 */
 	private int authentificationStatus = 0; 
 
-	public TCPServerThread(int num, Socket sock, UserData user) {
+	public TCPServerThread(int num, Socket sock) {
 		/* Konstruktor */
 		this.name = num;
 		this.socket = sock;
+		
+		
+		UserData u1 = new UserData("flo@flo.de", "flopass");
+		UserData u2 = new UserData("micha@micha.de", "michapass");
+		
+		userList.add(u1);
+		userList.add(u2);
+		
 	}
 
 	public void run() {
@@ -195,7 +208,19 @@ class TCPServerThread extends Thread {
 	 */
 	private String userMethod(String input){
 		String reply="";
-		if (input.substring(4).trim().equals(USERNAME)&&authentificationStatus==0){
+		
+		tryingToAuthenticate=input.substring(4).trim();
+		
+		boolean validUser=false;
+		for (UserData user : userList) {
+			if(user.getUserName().equals(tryingToAuthenticate)){
+				authentificatedUser = user;
+				validUser = true;
+				break;
+			}
+		}
+		
+		if ( validUser && authentificationStatus==0){
 			authentificationStatus=1;
 			reply= "+OK ohh good i know this user";
 		}else{
@@ -214,7 +239,16 @@ class TCPServerThread extends Thread {
 	 */
 	private String passMethod(String input){
 		String reply="";
-		if (input.substring(4).trim().equals(PASSWORD)&&authentificationStatus==1){
+		
+		String userPassword = input.substring(4).trim();
+		boolean validPassword=false;
+		
+		
+		if(authentificatedUser.getPassword().equals(userPassword)){
+			validPassword=true;
+		}
+		
+		if (validPassword&&authentificationStatus==1){
 			authentificationStatus=2;
 			reply= "+OK user password combination is valid";
 		}else{

@@ -31,10 +31,6 @@ public class MailReader {
 
 				while ((line = br.readLine()) != null) {
 					
-					//content.append(line);//my
-					
-					
-					//jan
 					line = (line.startsWith(".")) ? "."+line : line;
 					content.append(line + '\r' + '\n');
 					

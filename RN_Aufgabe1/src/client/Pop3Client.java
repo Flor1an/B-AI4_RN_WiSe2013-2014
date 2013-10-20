@@ -1,14 +1,6 @@
 package client;
 
-/*
- * TCPClient.java
- *
- * Version 2.0
- * Autor: M. H�bner HAW Hamburg (nach Kurose/Ross)
- * Zweck: TCP-Client Beispielcode:
- *        TCP-Verbindung zum Server aufbauen, einen vom Benutzer eingegebenen
- *        String senden, den String in Gro�buchstaben empfangen und ausgeben
- */
+
 import helper.MailWriter;
 import helper.UserData;
 
@@ -16,28 +8,36 @@ import java.io.*;
 import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Scanner;
 
-public class Pop3Client {
+/**
+* Pop3Client Klasse
+* */
+public class Pop3Client extends Thread {
 
-	private Socket clientSocket; // TCP-Standard-Socketklasse
-
+    /**
+    * Initialisierung der Instanzvariablen
+    * */
+	private Socket clientSocket; // Socket
 	private DataOutputStream outToServer; // Ausgabestream zum Server
 	private BufferedReader inFromServer; // Eingabestream vom Server
-
 	private boolean serviceRequested = true; // Client beenden?
+    private UserData user;
 
-	private UserData user;
-
+    /**
+    * Konstruktor
+    * @param Benutzername vom Typ UserData
+    * */
 	public Pop3Client(UserData user) {
 		this.user = user;
 	}
 
-	public void startJob() {
+    /**
+    * Thream erstellen
+    * @return void
+    * */
+	public void run() {
 		 while (true){
-
 			fetchingEmails();
-
 			try {
 				writeLogFile("Fetching completed. Waiting 30sek...\n");
 				System.out.println();
@@ -50,8 +50,11 @@ public class Pop3Client {
 		}
 	}
 
+    /**
+    * Ruft die Emails vom Server ab
+    * @return void
+    * */
 	private void fetchingEmails() {
-
 
 		/* Ab Java 7: try-with-resources mit automat. close benutzen! */
 		try {
@@ -59,25 +62,29 @@ public class Pop3Client {
 			clientSocket = new Socket(user.getServerAdress(), user.getPort());
 
 			/* Socket-Basisstreams durch spezielle Streams filtern */
-			outToServer = new DataOutputStream(clientSocket.getOutputStream());
-			inFromServer = new BufferedReader(new InputStreamReader(
-					clientSocket.getInputStream()));
+			outToServer = new DataOutputStream( clientSocket.getOutputStream( ));
+			inFromServer = new BufferedReader( new InputStreamReader(clientSocket.getInputStream()) );
 
+            /** valid ist der Rückgabewert der einzelnen Merhoden */
 			boolean valid = false;
 
-	
-			valid = serverStatus();
+            valid = serverStatus();
+
+            /** Benutzer ok? */
 			if (valid) {
 				valid = fireUSER();
 			}
 
+            /** Passwort ok? */
 			if (valid) {
 				valid = firePASS();
 			}
 
+            /** Benutzer und Passwort ok */
 			if (valid) {
-				writeToServer("LIST");
-				readFromServer();
+//				writeToServer("LIST");
+//
+//                readFromServer();
 
 				int amountOfMails = getAmountOfMailsByFireSTAT();
 
@@ -86,7 +93,7 @@ public class Pop3Client {
 				}
 			}
 
-
+            /** Verbindung schließen */
 			closeConnection();
 		} catch (IOException e) {
 			System.err.println("Connection aborted by server!");
@@ -95,6 +102,10 @@ public class Pop3Client {
 		
 	}
 
+    /**
+    * Sendet Befehl an den Server
+    * @param Server Anfrage als String
+    * */
 	private void writeToServer(String request) throws IOException {
 		/* Sende eine Zeile zum Server */
 		outToServer.writeBytes(request + '\n');
@@ -102,13 +113,16 @@ public class Pop3Client {
 		writeLogFile("==> " + request);
 	}
 
+    /**
+    * Lese Server Antwort
+    * @return Server Antwort als String
+    * */
 	private String readFromServer() throws IOException {
 		String reply="";
 		try {
 			do{
 				reply = inFromServer.readLine();
 
-				
 				if (reply.startsWith("+OK") | reply.startsWith("-ERR") | reply.equals(".") | Character.isDigit(reply.charAt(0))) {// ignores mail content
 					System.out.println("<<POP3 Client got from " + user.getServerAdress() + ":\t\t" + reply);
 					writeLogFile("<== " + reply +"\r\n");
@@ -126,6 +140,10 @@ public class Pop3Client {
 	
 		return reply;
 	}
+
+    /**
+    *
+    * */
 	private String readFromMailServer() throws IOException {
 		String reply="";
 		reply = inFromServer.readLine();
@@ -150,16 +168,20 @@ public class Pop3Client {
 
 	}
 
+    /*
+    * Schließe Verbindung zum Server
+    * */
 	private void closeConnection() throws IOException {
 		writeToServer("QUIT");
-		readFromServer();
-		clientSocket.close();
-
+        readFromServer();
+        clientSocket.close();
 		writeLogFile("Connection closed");
 		}
 
-	// #######################################################
-
+    /*
+    * Prüft ob die Antwort vom Server in Ordnung ist und schließt ggf. die Verbindung
+    * @return Serverstatus als Boolean
+    * */
 	private boolean serverStatus() throws IOException {
 		String reply = readFromServer();
 		boolean status = false;
@@ -172,6 +194,10 @@ public class Pop3Client {
 		return status;
 	}
 
+    /*
+    * Existiert ein Benuter mit der Kennung des gegebenen UserData Objects
+    * @return Existenz des Benutzers als boolean
+    * */
 	private boolean fireUSER() throws IOException {
 
 		String reply = "";
@@ -190,6 +216,10 @@ public class Pop3Client {
 
 	}
 
+    /*
+    * Prüft on ein Benuter mit dem Passwort existiert
+    * @return Existenz des Benutzers mit Passwort als boolean
+    * */
 	private boolean firePASS() throws IOException {
 
 		String reply = "";
@@ -209,6 +239,10 @@ public class Pop3Client {
 
 	}
 
+    /*
+    * Liefert die Anzahl der vorhandenen EMails auf dem Server samt größe
+    * @return Die Anzahl der vorhandenen Mails
+    * */
 	private int getAmountOfMailsByFireSTAT() throws IOException {
 
 		writeToServer("STAT");
@@ -223,6 +257,10 @@ public class Pop3Client {
 		return amount;
 	}
 
+    /*
+    * Holt alles Mails vom Server ab und löscht diese dort.
+    * Außerdem werden die Mails lokal abgelegt
+    * */
 	private void saveMailsLocalyByFireingUIDLandRETRandDELE(int amount)	throws IOException {
 		String reply = "";
 		String uidlOfMail = "";
@@ -237,7 +275,7 @@ public class Pop3Client {
 			uidlOfMail = reply.split(" ")[2];
 			
 			
-			//firering RETR
+			// firering RETR
 
 			writeToServer("RETR " + i);
 			reply = readFromMailServer();
